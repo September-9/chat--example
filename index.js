@@ -15,9 +15,9 @@ app.get('/',function(req,res){
 app.use(express.static('public'));
 
 var userlist = {};
+var usercount=0;
 app.post('/login',function(req,res){
 	res.cookie('user',req.body.name);
-	res.redirect('/');
 });
 
 io.on('connection',function(socket){
@@ -27,7 +27,9 @@ io.on('connection',function(socket){
 		socket.name=obj.username;
 		if(!userlist[obj.username]){
 			userlist[obj.username]=obj.username;
+			usercount++;
 		}
+		obj.count=usercount;
 		io.emit('login',{user:obj});
 		//console.log(userlist);
 		console.log(obj.username+'加入了聊天');
@@ -36,8 +38,12 @@ io.on('connection',function(socket){
 	socket.on('disconnect',function(){
 		if(userlist[socket.name]){
 			delete userlist[socket.name];
+			usercount--;
 		}
-		socket.broadcast.emit('logout',{user:socket.name});
+		var obj={};
+		obj.count=usercount;
+		obj.username=socket.name;
+		socket.broadcast.emit('logout',{user:obj});
 		console.log(socket.name+'退出了聊天');
 	});
 

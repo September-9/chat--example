@@ -34,6 +34,15 @@ body{
 	line-height: 30px;
 	padding-left: 10px;
 }
+#chatbox .top .left span{
+	color:#ccc;
+	padding-left:10px;
+}
+#chatbox .top .left span i{
+	font-weight: bold;
+	padding-left: 5px;
+	padding-right: 5px;
+}
 #chatbox .top .right{
 	float:right;
 	line-height: 30px;
