@@ -3,60 +3,139 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Socket.IO chat</title>
-	<style type="text/css">
-		*{margin:0; padding:0; box-sizing:border-box;}
-		body{
-			font:13px Helvetica,Arial;
-		}
-		form{
-			background: #000;
-			padding:3px;
-			position:fixed;
-			bottom:0;
-			width:100%;
-		}
-		form input{
-			border:0;
-			padding:10px;
-			width:90%;
-			margin-right:0.5%;
-		}
-		form button{
-			width:9%;
-			background: rgb(130,224,255);
-			border:none;
-			padding:10px;
-		}
-		#messages{
-			list-style-type:none;
-			margin:0;
-			padding:0;
-		}
-		#messages li{
-			padding:5px 10px;
-		}
-		#messages li:nth-child(odd){
-			background: #eee;
-		}
-	</style>
+	<link rel="stylesheet" type="text/css" href="css/base.css">
+	<link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 <body>
-	<ul id="messages"></ul>
-	<form action="">
-		<input id="m" autocomplete="off" />
-		<button>Send</button>
-	</form>
-	<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
-	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+	<div id="loginbox" style="display: block">
+		<div>
+			<h2>请输入你的昵称:</h2>
+			<input type="text" class="txt" placeholder="请输入你的昵称" id="username" name="username" />
+			<input type="button" class="btn" value="提交" /><!-- onclick="CHAT.usernameSubmit();" -->
+		</div>
+	</div>
+	<div id="chatbox" style="display: none">
+		<div class="top clearfix">
+			<div class="left">Websocket多人聊天室</div>
+			<div class="right">
+				<span id="showname"></span>
+				<a href="javascript:;" class="logout">退出</a>
+			</div>
+		</div>
+		<div class="chat">
+			<div id="messages"></div>
+			<div style="height:42px;"></div>
+			<form>
+				<input id="m" autocomplete="off" />
+				<input type="button" class="send" value="Send"/>
+			</form>
+		</div>
+		
+	</div>
+	<script src="socket.io.js"></script>
+	<script src="jquery-1.7.2.js"></script>
 	<script>
-		var socket=io();
-		$('form').submit(function(){
-			socket.emit('chat message',$('#m').val());
-			$('#m').val('');
-			return false;
-		});
-		socket.on('chat message',function(msg){
-			$('#messages').append($('<li>').text(msg));
+		$(function(){
+			var socket=io.connect();
+			var usermsg={};
+			function usernameSubmit(){
+				var username=$('#username').val();
+				usermsg.uname=username;
+				if(username==''){
+					alert('用户名不能为空!')
+				}else{
+					$('#username').val('');
+					$('#loginbox').hide();
+					$('#chatbox').show();
+					$('#showname').html(username);
+					init(username);
+				}
+			}
+				
+			$('.btn').click(function(){
+				usernameSubmit();
+			});
+
+			$('#username').bind('keydown',function(event){
+				if(event.keyCode==13){
+					usernameSubmit();
+				}
+			});
+			function scrollTo(){
+				window.scrollTo(0,document.getElementById('messages').clientHeight);
+			}
+			function mesSubmit(){
+				var content=$('#m').val();
+				if(content == ''){
+					alert('发送的信息不能为空！');
+				}else{
+					var nameDiv='<span>'+usermsg.uname+'</span>';
+					var megDiv='<i>'+content+'</i>';
+					var oP=document.createElement('p');
+					oP.className='me';
+					oP.innerHTML=nameDiv+megDiv;
+					$('#messages').append(oP);
+					$('#m').val('').focus();
+					usermsg.msg=content;
+				}
+				socket.emit('message',usermsg);
+				scrollTo();
+			}
+
+			$('.send').click(function(){
+				mesSubmit();
+			});
+			$('#m').bind('keydown',function(event){
+				if(event.keyCode==13){
+					mesSubmit();
+					return false;
+					event.preventDefault();
+				}
+			});
+			$('.logout').click(function(){
+				location.reload();
+			});
+			function getUid(){
+				var oDate=new Date();
+				return oDate.getTime()+""+Math.floor(Math.random()*100);
+			}
+			function updateSysMeg(o,action){
+				var user=o.user;
+				var section=document.createElement('section');
+				var html=(action=='login')?'加入了聊天':'退出了聊天';
+				var username=(action=='login')?o.user.username:o.user;
+				section.innerHTML='<div class="tips"><span>'+username+'</span>'+html+'</div>';
+				$('#messages').append(section);
+				scrollTo();
+			}
+			function init(username){
+				var uid=getUid();
+				var username=username;
+
+				socket.emit('login',{userid:uid,username:username});
+				socket.on('login',function(o){
+					updateSysMeg(o,'login');
+				});
+
+				socket.emit('disconnect',{userid:uid,username:username});
+				socket.on('logout',function(o){
+					console.log(o);
+					updateSysMeg(o,'logout');
+				});
+				
+				console.log(usermsg);
+				socket.on('message', function(usermsg){
+					console.log(usermsg);
+					var nameDiv='<span>'+usermsg.uname+'</span>';
+					var megDiv='<i>'+usermsg.msg+'</i>';
+					var oP=document.createElement('p');
+					oP.innerHTML=nameDiv+megDiv;
+					$('#messages').append(oP);
+					scrollTo();
+				});
+
+			}
+			
 		});
 	</script>
 </body>
